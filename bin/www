@@ -1,0 +1,73 @@
+#!/usr/bin/env node
+
+var app = require('../app');
+var http = require('http');
+var io;
+var port = normalizePort(process.env.PORT || '3000');
+var server;
+var socketio = require('socket.io');
+var sticky = require('sticky-session');
+
+app.set('port', port);
+
+server = http.createServer(app);
+io = socketio(server);
+
+io.on('connection', function (socket) {
+  console.log(`${socket.id} just connected.`);
+
+  socket.emit('message', `Welcome ${socket.id}, from ${process.pid}`);
+
+  socket.on('message', function (message) {
+    io.sockets.emit('message', message);
+  });
+
+  socket.on('disconnect', function () {
+    console.log(`${socket.id} disconnected.`);
+  });
+});
+
+if (!sticky.listen(server, port)) {
+  server.once('listening', function () {
+    console.log(`Master ${process.pid} is running.`);
+  });
+} else {
+  console.log(`Worker ${process.pid} started.`);
+}
+
+server.on('error', onError);
+
+function normalizePort (val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    return val;
+  }
+
+  if (port >= 0) {
+    return port;
+  }
+
+  return false;
+}
+
+function onError (error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+    default:
+      throw error;
+  }
+}
