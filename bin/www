@@ -2,30 +2,16 @@
 
 var app = require('../app');
 var http = require('http');
-var io;
 var port = normalizePort(process.env.PORT || '3000');
 var server;
 var socketio = require('socket.io');
 var sticky = require('sticky-session');
+var SocketModule = require('../modules/socket');
 
 app.set('port', port);
 
 server = http.createServer(app);
-io = socketio(server);
-
-io.on('connection', function (socket) {
-  console.log(`${socket.id} just connected.`);
-
-  socket.emit('message', `Welcome ${socket.id}, from ${process.pid}`);
-
-  socket.on('message', function (message) {
-    io.sockets.emit('message', message);
-  });
-
-  socket.on('disconnect', function () {
-    console.log(`${socket.id} disconnected.`);
-  });
-});
+new SocketModule(socketio(server));
 
 if (!sticky.listen(server, port)) {
   server.once('listening', function () {
